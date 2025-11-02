@@ -639,7 +639,7 @@ class Riven
 			// Explode
 			#RHecho('Split Explode');
 			$delimiter = $magicArgs[self::NA_DELIMITER] ?? ',';
-			$orig = $magicArgs[self::NA_EXPLODE]; // Used to try to expand with RECOVER_ORIG but is already expanded.
+			$orig = $magicArgs[self::NA_EXPLODE];
 			$values = explode($delimiter, $orig);
 		} elseif (count($values) > 2) {
 			#RHecho('Split Args');
@@ -987,14 +987,6 @@ class Riven
 	 */
 	private static function getTemplates(PPFrame $frame, string $templateName, int $nargs, array $named, array $values, bool $allowEmpty): array
 	{
-		if (!$nargs) {
-			$nargs = count($values);
-		}
-
-		if (count($values) === 0) {
-			return [];
-		}
-
 		$templates = [];
 		$templateBase = '{{' . $templateName;
 		foreach ($named as $name => $value) {
@@ -1167,26 +1159,27 @@ class Riven
 	 * @param string $templateName The name of the template.
 	 * @param int $nargs The number of arguments to split parameters into.
 	 * @param array $named All named arguments not covered by $magicArgs. These will be passed to each template call.
-	 * @param PPNode[] $values All numbered/anonymous arguments; should be 0-based, not 1-based.
+	 * @param array $values All numbered/anonymous arguments; 0-based, not 1-based like wiki.
 	 *
 	 * @return mixed The text of all the function calls.
 	 *
 	 */
 	private static function splitArgsCommon(Parser $parser, PPFrame $frame, array $magicArgs, string $templateName, int $nargs, array $named, array $values): array
 	{
-		if ($nargs < 1 || !$templateName || !count($values)) {
+		if ((strlen($templateName) && $nargs < 1) || empty($values)) {
 			return [''];
 		}
 
 		$allowEmpty = $magicArgs[self::NA_ALLOWEMPTY] ?? false;
-		$templates = self::getTemplates($frame, $templateName, $nargs, $named, $values, $allowEmpty);
-		if (empty($templates)) {
-			return [''];
+		if (strlen($templateName)) {
+			$values = self::getTemplates($frame, $templateName, $nargs, $named, $values, $allowEmpty);
+		} elseif (!$allowEmpty) {
+			$values = array_filter($values, 'strLen');
 		}
 
 		// show("Templates:\n", $templates);
 		$separator = ParserHelper::getSeparator($magicArgs);
-		$output = implode($separator, $templates);
+		$output = implode($separator, $values);
 		$debug = ParserHelper::checkDebugMagic($parser, $magicArgs);
 		if (!$debug) {
 			// We have to preprocess and re-expand or functions like #return inside #splitargs don't work. (Unclear exactly why, but it looks like they get expanded inside child frames instead of the current one.)
