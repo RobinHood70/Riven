@@ -646,7 +646,7 @@ class Riven
 			$slicedValues = array_slice($values, 2);
 			$values = [];
 			foreach ($slicedValues as $value) {
-				$values[] = trim($frame->expand($value, PPFrame::NO_TEMPLATES));
+				$values[] = trim($frame->expand($value, strlen($templateName) ? PPFrame::NO_TEMPLATES : 0));
 			}
 		} else {
 			#RHecho('Split Frame');
@@ -655,9 +655,9 @@ class Riven
 			// the DOM values, leaving templates as text so that {{!}} and other such things work as expected. This
 			// might break {{PAGENAMEx}}, though. If so, that seems like a corner case that probably can be written off
 			// in the description as "don't do that".
-			$flags = is_null($frame->parent)
-				? PPFrame::NO_TEMPLATES | PPFrame::NO_ARGS
-				: PPFrame::NO_TEMPLATES;
+			$flags =
+				(strlen($templateName) ? PPFrame::NO_TEMPLATES : 0) |
+				(is_null($frame->parent) ? PPFrame::NO_ARGS : 0);
 			$parent = $frame->parent ?? $frame;
 			foreach ($frame->numberedArgs as $key => $value) {
 				$values[$key - 1] = $parent->expand($value, $flags);
