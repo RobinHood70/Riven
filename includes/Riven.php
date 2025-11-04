@@ -103,22 +103,16 @@ class Riven
 			$modeWord = self::AV_ORIGINAL;
 		}
 
-		$retval = $content;
-		if ($modeWord !== self::AV_ORIGINAL) {
-			$retval = preg_replace('#<!--.*?-->#s', '', $retval);
-		}
-
-		$retval = trim($retval);
 		switch ($modeWord) {
 			/*
             case self::AV_RECURSIVE:
                 $retval = self::cleanSpacePP($retval, $parser, $frame, true);
                 break; */
 			case self::AV_TOP:
-				$retval = self::cleanSpacePP($parser, $frame, $retval);
+				$retval = self::cleanSpacePP($parser, $frame, $content);
 				break;
 			default:
-				$retval = self::cleanSpaceOriginal($retval);
+				$retval = self::cleanSpaceOriginal(trim($content));
 				break;
 		}
 
@@ -850,48 +844,68 @@ class Riven
 	 */
 	private static function cleanSpaceNode(PPFrame $frame, PPNode $node): string
 	{
+		// Functional but slow. May want to try getRawChildren() instead if it remains public.
+		#RHDebug::show('Root Node', $node);
 		// This had been a fairly simple method but changes in MW 1.28 made it much more complex. The former
 		// "recursive" mode was also abandoned for this reason.
 		$output = '';
-		$wantCloseNode = false;
-		$doTrim = false;
+		$prevTrimmable = true;
 		$node = $node->getFirstChild();
+		$textAccum = '';
+		$inLink = false;
 		while ($node) {
-			$nextNode = $node->getNextSibling();
-			if (self::isLink($node)) {
-				$wantCloseNode = true;
-				$value = $node->value;
-				if ($doTrim) {
-					$value = ltrim($value);
-					$doTrim = false;
-				}
-
-				if ($wantCloseNode) {
-					$offset = strpos($value, ']]');
-					if ($offset) {
-						$wantCloseNode = false;
-						// show($nextNode);
-						$linkEnd = substr($value, 0, $offset + 2);
-						$remainder = substr($node->value, $offset + 2);
-						$remainder = preg_replace('#\A\s+(' . self::TAG_REGEX . '|\Z)#', '$1', $remainder, 1);
-						$doTrim = !strlen($remainder);
-						$value = $linkEnd . $remainder;
-						// DoTrim is set to true only
+			#RHDebug::show('Processing Node', $frame->expand($node, PPFrame::RECOVER_ORIG));
+			if ($node instanceof PPNode_Hash_Tree && $node->name === 'comment') {
+			} elseif ($inLink) {
+				if ($node instanceof PPNode_Hash_Text) {
+					$pos = explode(']]', $node->value, 2);
+					if (count($pos) === 1) {
+						$output .= $frame->expand($node, PPFrame::RECOVER_ORIG);
+					} else {
+						$inLink = false;
+						$output .= $pos[0] . ']]';
+						$textAccum = $pos[1];
+						$prevTrimmable = ctype_space($textAccum);
 					}
+				} else {
+					$output .= $frame->expand($node, PPFrame::RECOVER_ORIG);
 				}
-			} elseif ($doTrim && $node instanceof PPNode_Hash_Text && !strLen(trim($node->value)) && self::isTrimmable($nextNode)) {
-				$value = '';
+			} elseif ($node instanceof PPNode_Hash_Text) {
+				if (substr($node->value, 0, 2) === '[[') {
+					if (!$prevTrimmable || !ctype_space($textAccum)) {
+						$output .= $textAccum;
+					}
+
+					$textAccum = '';
+					$pos = explode(']]', $node->value, 2);
+					if (count($pos) === 1) {
+						$inLink = true;
+						$output .= $node->value;
+					} else {
+						$output .= $pos[0] . ']]';
+						$textAccum = $pos[1];
+						$prevTrimmable = ctype_space($textAccum);
+					}
+				} else {
+					// Text is added to an accumulator to correctly trim spaces from mixed text/comment nodes.
+					$textAccum .= $node->value;
+				}
 			} else {
-				$doTrim = true;
-				$value = $frame->expand($node, PPFrame::RECOVER_ORIG);
+				$curTrimmable = $node instanceof PPNode_Hash_Tree && $node->name === 'template';
+				if (!$prevTrimmable || !$curTrimmable || !ctype_space($textAccum)) {
+					$output .= $textAccum;
+				}
+
+				$prevTrimmable = $curTrimmable;
+				$textAccum = '';
+				$output .= $frame->expand($node, PPFrame::RECOVER_ORIG);
 			}
 
-			if ($nextNode && self::isLink($nextNode)) {
-				$value = preg_replace('#(' . self::TAG_REGEX . ')\s*\Z#', '$1', $value, 1);
-			}
+			$node = $node->getNextSibling();
+		}
 
-			$output .= $value;
-			$node = $nextNode;
+		if (!$prevTrimmable || !ctype_space($textAccum)) {
+			$output .= $textAccum;
 		}
 
 		return $output;
@@ -925,7 +939,8 @@ class Riven
 	 */
 	private static function cleanSpacePP(Parser $parser, PPFrame $frame, $text): string
 	{
-		$rootNode = $parser->preprocessToDom($text);
+		$rootNode = $parser->preprocessToDom($text, VersionHelper::FOR_INCLUSION);
+		#RHDebug::show('Root Node', $rootNode);
 		return self::cleanSpaceNode($frame, $rootNode);
 	}
 
@@ -1049,34 +1064,6 @@ class Riven
 	private static function isLink(PPNode $node): bool
 	{
 		return $node instanceof PPNode_Hash_Text && substr($node->value, 0, 2) === '[[';
-	}
-
-	/**
-	 * Indicates whether the node provided can be trimmed out of the table if the content is empty.
-	 *
-	 * @param ?PPNode $node The node to check.
-	 *
-	 * @return bool
-	 *
-	 */
-	private static function isTrimmable(?PPNode $node = null): bool
-	{
-		// Is it a template?
-		if ($node instanceof PPTemplateFrame_Hash) {
-			return true;
-		}
-
-		if ($node instanceof PPNode_Hash_Text) {
-			// Is it a link?
-			if (substr($node->value, 0, 2) == '[[') {
-				return true;
-			}
-
-			// Is it something that looks like an HTML tag?
-			return preg_match('#\A\s*' . self::TAG_REGEX  . '#s', $node->value);
-		}
-
-		return false; // We don't recognize the node type, so treat it as important.
 	}
 
 	/**
