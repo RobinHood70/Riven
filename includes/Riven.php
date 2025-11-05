@@ -844,10 +844,11 @@ class Riven
 	 */
 	private static function cleanSpaceNode(PPFrame $frame, PPNode $node): string
 	{
-		// Functional but slow. May want to try getRawChildren() instead if it remains public.
-		#RHDebug::show('Root Node', $node);
-		// This had been a fairly simple method but changes in MW 1.28 made it much more complex. The former
-		// "recursive" mode was also abandoned for this reason.
+		/*
+		 * Functional but slow. This had been a fairly simple method but changes in MW 1.28 made it much more complex.
+		 * The former "recursive" mode was also abandoned for this reason, but may be doable now that code has been
+		 * fixed. (Note: fixes are probably not directly compatible with < MW 1.28.)
+		 */
 		$output = '';
 		$prevTrimmable = true;
 		$node = $node->getFirstChild();
@@ -912,6 +913,87 @@ class Riven
 	}
 
 	/**
+	 * Cleans the table using the MediaWiki pre-processor. This is used for both "top" and "recursive" modes.
+	 *
+	 * @param PPFrame $frame The template frame in use.
+	 * @param PPNode $node The pre-processor node to clean.
+	 * @param mixed $recurse Whether to recurse into the node.
+	 *
+	 * @return array The wiki text after cleaning it.
+	 *
+	 */
+	private static function cleanSpaceNode2(array $rawNodes): array
+	{
+		#RHDebug::show('Raw Nodes', $rawNodes);
+
+		/* Slightly faster than text-based method, but still nowhere near original regex or just using comments for
+		 * spacing. Left available for advanced use-cases, but otherwise not recommended.
+		 */
+
+		#RHDebug::show('Root Node', $node);
+		$output = [];
+		$prevTrimmable = true;
+		$textAccum = '';
+		$inLink = false;
+		for ($i = 0; $i < count($rawNodes); $i++) {
+			$node = $rawNodes[$i];
+			$nodeName = $node[0];
+			#RHDebug::show('Processing Node', $frame->expand($node, PPFrame::RECOVER_ORIG));
+			if ($nodeName === 'comment') {
+			} elseif ($inLink) {
+				if (is_string($node)) {
+					$pos = explode(']]', $node, 2);
+					if (count($pos) === 1) {
+						$output[] = $node;
+					} else {
+						$inLink = false;
+						$output[] = $pos[0] . ']]';
+						$textAccum = $pos[1];
+						$prevTrimmable = ctype_space($textAccum);
+					}
+				} else {
+					$output[] = $node;
+				}
+			} elseif (is_string($node)) {
+				if (substr($node, 0, 2) === '[[') {
+					if (!$prevTrimmable || !ctype_space($textAccum)) {
+						$output[] = $textAccum;
+					}
+
+					$textAccum = '';
+					$pos = explode(']]', $node, 2);
+					if (count($pos) === 1) {
+						$inLink = true;
+						$output[] = $node;
+					} else {
+						$output[] = $pos[0] . ']]';
+						$textAccum = $pos[1];
+						$prevTrimmable = ctype_space($textAccum);
+					}
+				} else {
+					// Text is added to an accumulator to correctly trim spaces from mixed text/comment nodes.
+					$textAccum .= $node;
+				}
+			} else {
+				$curTrimmable = $nodeName === 'template';
+				if (!$prevTrimmable || !$curTrimmable || !ctype_space($textAccum)) {
+					$output[] = $textAccum;
+				}
+
+				$prevTrimmable = $curTrimmable;
+				$textAccum = '';
+				$output[] = $node;
+			}
+		}
+
+		if (!$prevTrimmable || !ctype_space($textAccum)) {
+			$output[] = $textAccum;
+		}
+
+		return $output;
+	}
+
+	/**
 	 * Cleans the text according to the original regex-based approach, minus the category/trail handling, as noted in
 	 * doCleanspace().
 	 *
@@ -941,7 +1023,15 @@ class Riven
 	{
 		$rootNode = $parser->preprocessToDom($text, VersionHelper::FOR_INCLUSION);
 		#RHDebug::show('Root Node', $rootNode);
-		return self::cleanSpaceNode($frame, $rootNode);
+		if ($rootNode instanceof PPNode_Hash_Tree) {
+			$newNodes = self::cleanSpaceNode2($rootNode->getRawChildren());
+			$store = [['root', $newNodes]];
+			$dom = PPNode_Hash_Tree::factory($store, 0);
+			#RHDebug::show('Dom', $dom);
+			$text = $frame->expand($dom, PPFrame::RECOVER_ORIG);
+		}
+
+		return $text;
 	}
 
 	/**
