@@ -1251,6 +1251,7 @@ class Riven
 		if (strlen($templateName)) {
 			$values = self::getTemplates($frame, $templateName, $nargs, $named, $values, $allowEmpty);
 		} elseif (!$allowEmpty) {
+			$values = array_map('trim', $values);
 			$values = array_filter($values, 'strLen');
 		}
 
