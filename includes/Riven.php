@@ -1076,10 +1076,11 @@ class Riven
 	private static function getTemplates(PPFrame $frame, string $templateName, int $nargs, array $named, array $values, bool $allowEmpty): array
 	{
 		$templates = [];
-		$templateBase = '{{' . $templateName;
+		$namedParameters = '';
+		// Add in named parameters that go with every template.
 		foreach ($named as $name => $value) {
 			$value = trim($frame->expand($value));
-			$templateBase .= "|$name=$value";
+			$namedParameters .= "|$name=$value";
 		}
 
 		// Pre-dividing the template values allows handling missing values or values presented out of order (e.g., from
@@ -1100,8 +1101,7 @@ class Riven
 				// Unlike normal templates, we strip off spacing even for numbered arguments, so groups can be
 				// formatted each on a new line. The purpose of the double-expansion is to first check if the entire
 				// value evaluates to nothing. This allows template lookalikes like {{#if}} to take effect normally. If
-				// it's non-blank, then we re-expand, but retaining templates so that things like {{!}} get processed
-				// as expected.
+				// it's non-blank, then we re-expand.
 				$dom = $frame->parser->preprocessToDom($value);
 				$checkValue = trim($frame->expand($dom));
 				if (strlen($checkValue)) {
@@ -1110,14 +1110,13 @@ class Riven
 					$value = '';
 				}
 
-				// We have to use numbered arguments to avoid the possibility that $value is (or even looks like)
-				// 'param=value'.
+				// We have to use numbered arguments in case $value contains '='.
 				$numberedParameters .= "|$paramNum=$value";
 			}
 
-			// show('Template: ', $template);
+			// RHDebug::show('Template', $templateBase . $numberedParameters . '}}', "\nBlank: ", $blank, "\nAllow Empty: ", $allowEmpty);
 			if ($allowEmpty || !$blank) {
-				$templates[] = $templateBase . $numberedParameters . '}}';
+				$templates[] = '{{' . $templateName . $namedParameters . $numberedParameters . '}}';
 			}
 		}
 
