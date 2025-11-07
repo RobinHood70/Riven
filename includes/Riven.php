@@ -116,7 +116,7 @@ class Riven
 				break;
 		}
 
-		if (ParserHelper::checkDebugMagic($parser, $frame, $args)) {
+		if (ParserHelper::checkDebugMagic($parser, $args)) {
 			return ParserHelper::formatTagForDebug($retval, true);
 		}
 
