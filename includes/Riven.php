@@ -1089,7 +1089,7 @@ class Riven
 		$templates = [];
 		$templateBase = '{{' . $templateName;
 		foreach ($named as $name => $value) {
-			$value = $frame->expand($value);
+			$value = trim($frame->expand($value));
 			$templateBase .= "|$name=$value";
 		}
 
