@@ -648,8 +648,8 @@ class Riven
 			}
 		}
 
-		RHDebug::show('Named', $named);
-		RHDebug::show('Values', $values);
+		#RHDebug::show('Named', $named);
+		#RHDebug::show('Values', $values);
 		return self::splitArgsCommon($parser, $frame, $magicArgs, $templateName, $nargs, $named, $values);
 	}
 
@@ -1114,7 +1114,7 @@ class Riven
 				$numberedParameters .= "|$paramNum=$value";
 			}
 
-			// RHDebug::show('Template', $templateBase . $numberedParameters . '}}', "\nBlank: ", $blank, "\nAllow Empty: ", $allowEmpty);
+			#RHDebug::show('Template', $templateBase . $numberedParameters . '}}', "\nBlank: ", $blank, "\nAllow Empty: ", $allowEmpty);
 			if ($allowEmpty || !$blank) {
 				$templates[] = '{{' . $templateName . $namedParameters . $numberedParameters . '}}';
 			}
