@@ -220,20 +220,11 @@ class Riven
 			ParserHelper::NA_SEPARATOR
 		]);
 
-		/** @var array $magicArgs */
-		/** @var array $values */
 		[$magicArgs, $values] = ParserHelper::getMagicArgs($frame, $args, $magicWords);
 		if (!ParserHelper::checkIfs($magicArgs)) {
 			return '';
 		}
 
-		#RHshow('Magic Args', $magicArgs);
-
-		// show("Passed if check:\n", $values, "\nDupes:\n", $dupes);
-		/**
-		 * @var array $named
-		 * @var array $values
-		 */
 		[$named, $values] = ParserHelper::splitNamedArgs($frame, $values);
 		$templateName = trim($frame->expand($values[0] ?? ''));
 		$nargs = (int)trim($frame->expand($values[1] ?? '0'));
@@ -312,8 +303,6 @@ class Riven
 			ParserHelper::NA_IFNOT
 		]);
 
-		/** @var array $magicArgs */
-		/** @var array $values */
 		[$magicArgs, $values] = ParserHelper::getMagicArgs($frame, $args, $magicWords);
 		if (!ParserHelper::checkIfs($magicArgs)) {
 			return '';
@@ -607,14 +596,14 @@ class Riven
 			ParserHelper::NA_SEPARATOR
 		]);
 
-		/** @var array $magicArgs */
-		/** @var array $values */
 		[$magicArgs, $values] = ParserHelper::getMagicArgs($frame, $args, $magicWords);
 		if (!ParserHelper::checkIfs($magicArgs)) {
 			return '';
 		}
 
-		// show("Passed if check:\n", $values, "\nDupes:\n", $dupes);
+		#RHDebug::show('Magic Args', $magicArgs);
+		#RHDebug::show('Values', $values);
+
 		[$named, $values] = ParserHelper::splitNamedArgs($frame, $values);
 		if (!isset($values[1])) {
 			return '';
@@ -659,8 +648,8 @@ class Riven
 			}
 		}
 
-		#RHshow('Split Named', $named);
-		#RHshow('Split Values', $values);
+		RHDebug::show('Named', $named);
+		RHDebug::show('Values', $values);
 		return self::splitArgsCommon($parser, $frame, $magicArgs, $templateName, $nargs, $named, $values);
 	}
 
@@ -1077,8 +1066,8 @@ class Riven
 	 * @param PPFrame $frame The template frame in use.
 	 * @param string $templateName The name of the template.
 	 * @param int $nargs The number of arguments to divide everything up by.
-	 * @param PPNode[] $named Named values that will be included in *every* template.
-	 * @param PPNode[] $values Unnamed values to be split up and included with the template; 0-based.
+	 * @param array<string, PPNode> $named Named values that will be included in *every* template.
+	 * @param array<int, string> $values Unnamed values to be split up and included with the template; 0-based, should arrive expanded and trimmed.
 	 * @param bool $allowEmpty Whether the list of templates should include empty inputs.
 	 *
 	 * @return array A string[] containing the individual template calls that #splitargs splits into.
@@ -1107,8 +1096,6 @@ class Riven
 		foreach ($rows as $row) {
 			$numberedParameters = '';
 			$blank = true;
-			/** @var int $paramNum */
-			/** @var PPNode $value */
 			foreach ($row as $paramNum => $value) {
 				// Unlike normal templates, we strip off spacing even for numbered arguments, so groups can be
 				// formatted each on a new line. The purpose of the double-expansion is to first check if the entire
@@ -1226,11 +1213,11 @@ class Riven
 	 *
 	 * @param Parser $parser The parser in use.
 	 * @param PPFrame $frame The template frame in use.
-	 * @param array $magicArgs The template arguments that contain a recognized keyword for the function in string key/PPNode value format.
+	 * @param array<string, string> $magicArgs The template arguments that contain a recognized keyword for the function in string key/PPNode value format.
 	 * @param string $templateName The name of the template.
 	 * @param int $nargs The number of arguments to split parameters into.
-	 * @param array $named All named arguments not covered by $magicArgs. These will be passed to each template call.
-	 * @param array $values All numbered/anonymous arguments; 0-based, not 1-based like wiki.
+	 * @param array<string, PPNode_Hash_Tree|string> $named All named arguments not covered by $magicArgs. These will be passed to each template call.
+	 * @param array<int, string> $values All numbered/anonymous arguments; 0-based, not 1-based like wiki.
 	 *
 	 * @return mixed The text of all the function calls.
 	 *
