@@ -243,14 +243,8 @@ class Riven
 				: $magicArgs[self::NA_DELIMITER] ?? ','
 		);
 
-		$values = trim($frame->expand($values[2] ?? ''));
-		$values = explode($delimiter, $values);
+		$values = explode($delimiter, $frame->expand($values[2] ?? ''));
 
-		#RHshow('Template Name', $templateName);
-		#RHshow('Num Args', $nargs);
-		#RHshow('Delimiter', $delimiter);
-		#RHshow('Explode Named', $named);
-		#RHshow('Explode Values', $values);
 		return self::splitArgsCommon($parser, $frame, $magicArgs, $templateName, $nargs, $named, $values);
 	}
 
@@ -627,8 +621,8 @@ class Riven
 		}
 
 		// Figure out what we're dealing with and populate appropriately.
-		$templateName = $frame->expand($values[0] ?? '');
-		$nargs = (int)($frame->expand($values[1] ?? '0'));
+		$templateName = trim($frame->expand($values[0] ?? ''));
+		$nargs = (int)trim($frame->expand($values[1] ?? '0'));
 		if (isset($magicArgs[self::NA_EXPLODE])) {
 			// Explode
 			#RHecho('Split Explode');
@@ -640,7 +634,7 @@ class Riven
 			$slicedValues = array_slice($values, 2);
 			$values = [];
 			foreach ($slicedValues as $value) {
-				$values[] = trim($frame->expand($value, strlen($templateName) ? PPFrame::NO_TEMPLATES : 0));
+				$values[] = $frame->expand($value, strlen($templateName) ? PPFrame::NO_TEMPLATES : 0);
 			}
 		} else {
 			#RHecho('Split Frame');
@@ -1247,12 +1241,12 @@ class Riven
 			return [''];
 		}
 
+		$values = array_map('trim', $values);
 		$allowEmpty = $magicArgs[self::NA_ALLOWEMPTY] ?? false;
 		if (strlen($templateName)) {
 			$values = self::getTemplates($frame, $templateName, $nargs, $named, $values, $allowEmpty);
 		} elseif (!$allowEmpty) {
-			$values = array_map('trim', $values);
-			$values = array_filter($values, 'strLen');
+			$values = array_filter($values, 'strlen');
 		}
 
 		// show("Templates:\n", $templates);
