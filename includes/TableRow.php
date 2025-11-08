@@ -34,7 +34,6 @@ class TableRow
 	 * Creates an instance of a TableRow.
 	 *
 	 * @param string $openTag The full <tr> tag.
-	 *
 	 */
 	public function __construct(string $openTag)
 	{
@@ -46,12 +45,11 @@ class TableRow
 
 	#region Public Functions
 	/**
-	 * [Description for addRawCells]
+	 * Adds raw cells to this row from regex matches.
 	 *
-	 * @param TableRow[] $map
-	 * @param int $rowNum
-	 * @param string[][] $rawCells
-	 * @param bool $cleanImages
+	 * @param TableRow[] $map The table row map.
+	 * @param int $rowNum The current row number.
+	 * @param string[][] $rawCells The raw cell matches.
 	 */
 	public function addRawCells(array &$map, int $rowNum, array $rawCells): void
 	{
@@ -90,7 +88,10 @@ class TableRow
 		}
 	}
 
-	public function decrementRowspan()
+	/**
+	 * Reduces the rowspan of all span cells in this row by one.
+	 */
+	public function decrementRowspan(): void
 	{
 		$parents = [];
 		foreach ($this->cells as $cell) {
@@ -102,22 +103,22 @@ class TableRow
 		}
 	}
 
-	public function getColumnCount()
+	/**
+	 * Gets the number of columns in this row.
+	 *
+	 * @return int The number of columns.
+	 */
+	public function getColumnCount(): int
 	{
 		return count($this->cells);
 	}
 
-	public function setCell(int $col, TableCell $cell)
-	{
-		// Count cells, treating spans as a single cell.
-		if (!$cell->parent) {
-			$this->cellCount++;
-		}
-
-		$this->cells[$col] = $cell;
-	}
-
-	public function toHtml()
+	/**
+	 * Serializes the TableRow to HTML.
+	 *
+	 * @return string
+	 */
+	public function toHtml(): string
 	{
 		$output = "$this->openTag\n";
 		foreach ($this->cells as $cell) {
@@ -131,9 +132,9 @@ class TableRow
 	}
 
 	/**
-	 * [Description for updateHasContent]
+	 * Updates whether this row has content based on its cells.
 	 *
-	 * @param bool $cleanImages Whether to clean images from data cells before deciding if a row has content.
+	 * @param bool $cleanImages Whether to remove images when checking for content.
 	 */
 	public function updateHasContent(bool $cleanImages): void
 	{
@@ -149,4 +150,25 @@ class TableRow
 
 		$this->hasContent = $hasContent;
 	}
+	#endregion
+
+	#region Private Functions
+	/**
+	 * Sets a cell at the given column index.
+	 *
+	 * @param int $col The column index.
+	 * @param TableCell $cell The cell to set.
+	 *
+	 * @comments This function counts span cells as a single cell.
+	 */
+	private function setCell(int $col, TableCell $cell): void
+	{
+		// Count cells, treating spans as a single cell.
+		if (!$cell->parent) {
+			$this->cellCount++;
+		}
+
+		$this->cells[$col] = $cell;
+	}
+	#endregion
 }

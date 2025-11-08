@@ -35,7 +35,7 @@ class RivenHooks /* implements
 	/**
 	 * Register variables.
 	 *
-	 * @param array $aCustomVariableIds The current list of variables.
+	 * @param string[] $aCustomVariableIds The current list of variables.
 	 *
 	 * @return void
 	 *
@@ -73,7 +73,7 @@ class RivenHooks /* implements
 	 *
 	 * @param Parser $parser The parser in use.
 	 * @param array $variableCache The magic word variable cache.
-	 * @param mixed $magicWordId The magic word id being sought.
+	 * @param string $magicWordId The magic word id being sought.
 	 * @param mixed $ret Return value.
 	 * @param PPFrame $frame The frame in use.
 	 *

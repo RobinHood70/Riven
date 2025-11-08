@@ -82,10 +82,9 @@ class TableCell
 	/**
 	 * Creates a new instance of a TableCell from a Regex match with named groups.
 	 *
-	 * @param array $match
+	 * @param string[] $match
 	 *
 	 * @return ?TableCell
-	 *
 	 */
 	public static function FromMatch(array $match): ?TableCell
 	{
@@ -108,7 +107,6 @@ class TableCell
 	 * @param TableCell $parent
 	 *
 	 * @return ?TableCell
-	 *
 	 */
 	public static function SpanChild(TableCell $parent): ?TableCell
 	{
@@ -121,7 +119,6 @@ class TableCell
 	 * Reduces the parent rowspan by one or, if there's no parent, the current rowspan.
 	 *
 	 * @return void
-	 *
 	 */
 	public function decrementRowspan(): void
 	{
@@ -146,6 +143,13 @@ class TableCell
 		return "<$name$attribs>$this->content</$name>";
 	}
 
+	/**
+	 * Trims unassigned parameters and, optionally, images.
+	 *
+	 * @param bool $cleanImages Whether to remove images.
+	 *
+	 * @return string The trimmed content.
+	 */
 	public function getTrimmedContent(bool $cleanImages): string
 	{
 		$content = $this->content;
